@@ -1,31 +1,51 @@
 package com.bridgelabz.AddressBook.controller;
 
+import com.bridgelabz.AddressBook.model.Contact;
+import com.bridgelabz.AddressBook.repository.ContactRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
 @RestController
-@RequestMapping("/addressbook")
+@RequestMapping("/api/persons")
 public class AddressBookController {
 
-    @GetMapping("")
-    public String welcome() {
-        return "Welcome to the Address Book REST API!";
+    @Autowired
+    private ContactRepository repository;
+
+    @GetMapping
+    public ResponseEntity<List<Contact>> getAllPersons() {
+        return ResponseEntity.ok(repository.findAll());
     }
 
-    @GetMapping("/contacts")
-    public List<Map<String, String>> getContacts() {
-        Map<String, String> contact1 = new HashMap<>();
-        contact1.put("name", "Alice");
-        contact1.put("email", "alice@example.com");
-        contact1.put("phone", "1234567890");
+    @GetMapping("/{id}")
+    public ResponseEntity<Contact> getPersonById(@PathVariable Long id) {
+        return repository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
-        Map<String, String> contact2 = new HashMap<>();
-        contact2.put("name", "Bob");
-        contact2.put("email", "bob@example.com");
-        contact2.put("phone", "9876543210");
+    @PostMapping
+    public ResponseEntity<Contact> createPerson(@RequestBody Contact person) {
+        return new ResponseEntity<>(repository.save(person), HttpStatus.CREATED);
+    }
 
-        return Arrays.asList(contact1, contact2);
+    @PutMapping("/{id}")
+    public ResponseEntity<Contact> updatePerson(@PathVariable Long id, @RequestBody Contact updatedPerson) {
+        return repository.findById(id).map(existingPerson -> {
+            existingPerson.setName(updatedPerson.getName());
+            existingPerson.setAddress(updatedPerson.getAddress());
+            return ResponseEntity.ok(repository.save(existingPerson));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePerson(@PathVariable Long id) {
+        return repository.findById(id).map(person -> {
+            repository.delete(person);
+            return new ResponseEntity<Void>(HttpStatus.NO_CONTENT);
+        }).orElse(ResponseEntity.notFound().build());
     }
 }
-
